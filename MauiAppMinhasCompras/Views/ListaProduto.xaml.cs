@@ -9,7 +9,6 @@ public partial class ListaProduto : ContentPage
     public ListaProduto()
     {
         InitializeComponent();
-
         lst_produtos.ItemsSource = lista;
     }
 
@@ -64,15 +63,52 @@ public partial class ListaProduto : ContentPage
         {
             await DisplayAlert("Ops", ex.Message, "OK");
         }
+        finally
+        {
+            lst_produtos.IsRefreshing = false;
+        }
+    }
+
+    // NOVO: filtro por categoria
+    private async void pk_filtro_categoria_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        string categoria = pk_filtro_categoria.SelectedItem as string;
+        if (string.IsNullOrEmpty(categoria)) return;
+
+        try
+        {
+            List<Produto> tmp = categoria == "Todas"
+                ? await App.Db.GetAll()
+                : await App.Db.GetByCategoria(categoria);
+
+            lista.Clear();
+            foreach (var item in tmp)
+                lista.Add(item);
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlert("Ops", ex.Message, "OK");
+        }
     }
 
     private void ToolbarItem_Clicked_1(object sender, EventArgs e)
     {
         double soma = lista.Sum(i => i.Total);
-
         string msg = $"O total é {soma:C}";
-
         DisplayAlert("Total dos Produtos", msg, "OK");
+    }
+
+    // NOVO: abre a tela de relatório
+    private void ToolbarItem_Clicked_Relatorio(object sender, EventArgs e)
+    {
+        try
+        {
+            Navigation.PushAsync(new Views.RelatorioCategoria());
+        }
+        catch (Exception ex)
+        {
+            DisplayAlert("Ops", ex.Message, "OK");
+        }
     }
 
     private async void MenuItem_Clicked(object sender, EventArgs e)
@@ -111,7 +147,23 @@ public partial class ListaProduto : ContentPage
         {
             DisplayAlert("Ops", ex.Message, "OK");
         }
+    }
 
-
+    private async void lst_produtos_Refreshing(object sender, EventArgs e)
+    {
+        try
+        {
+            lista.Clear();
+            List<Produto> tmp = await App.Db.GetAll();
+            tmp.ForEach(i => lista.Add(i));
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlert("Ops", ex.Message, "OK");
+        }
+        finally
+        {
+            lst_produtos.IsRefreshing = false;
+        }
     }
 }

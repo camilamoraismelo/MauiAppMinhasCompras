@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SQLite;
@@ -23,8 +24,8 @@ namespace MauiAppMinhasCompras.Helpers
 
         public Task<int> Update(Produto p)
         {
-            string sql = "UPDATE Produto SET Descricao=?, Quantidade=?, Preco=? WHERE Id=?";
-            return _conn.ExecuteAsync(sql, p.Descricao, p.Quantidade, p.Preco, p.Id);
+            string sql = "UPDATE Produto SET Descricao=?, Quantidade=?, Preco=?, Categoria=? WHERE Id=?";
+            return _conn.ExecuteAsync(sql, p.Descricao, p.Quantidade, p.Preco, p.Categoria, p.Id);
         }
 
         public Task<int> Delete(int id)
@@ -41,6 +42,30 @@ namespace MauiAppMinhasCompras.Helpers
         {
             string sql = "SELECT * FROM Produto WHERE Descricao LIKE ?";
             return _conn.QueryAsync<Produto>(sql, "%" + q + "%");
+        }
+
+        // NOVO: busca produtos de uma categoria específica
+        public Task<List<Produto>> GetByCategoria(string categoria)
+        {
+            string sql = "SELECT * FROM Produto WHERE Categoria = ?";
+            return _conn.QueryAsync<Produto>(sql, categoria);
+        }
+
+        // NOVO: gera o relatório de total gasto por categoria
+        public async Task<List<CategoriaTotal>> GetTotalPorCategoria()
+        {
+            var produtos = await _conn.Table<Produto>().ToListAsync();
+
+            return produtos
+                .GroupBy(p => string.IsNullOrWhiteSpace(p.Categoria) ? "Sem Categoria" : p.Categoria)
+                .Select(g => new CategoriaTotal
+                {
+                    Categoria = g.Key,
+                    QuantidadeItens = g.Count(),
+                    Total = g.Sum(p => p.Total)
+                })
+                .OrderByDescending(c => c.Total)
+                .ToList();
         }
     }
 }
